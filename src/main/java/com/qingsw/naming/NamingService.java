@@ -12,6 +12,8 @@ import java.util.Random;
 @Service
 public class NamingService {
 
+  private int extractSpan = 10;
+
   @Autowired
   GushiDataSource gushiDataSource;
 
@@ -36,6 +38,7 @@ public class NamingService {
     }
     int contentLength = content.length();
     String result = "";
+    List<String> keys = new ArrayList<>();
     for ( ; ; ) {
       int index = random.nextInt(contentLength);
       if (!StringUtils.isEmpty(content.charAt(index))
@@ -43,8 +46,11 @@ public class NamingService {
           && content.charAt(index) != '，'
           && content.charAt(index) != '。'
           && content.charAt(index) != '；'
+          && content.charAt(index) != '？'
+          && content.charAt(index) != '！'
       ) {
         result += content.charAt(index);
+        keys.add(content.charAt(index) + "");
       }
       if (result.length() == size) {
         break;
@@ -52,8 +58,32 @@ public class NamingService {
     }
     Name name = new Name();
     name.setFullName(givenName + result);
-    name.setSource(shijing.getContent());
+    name.setSource(textAbstract(shijing.getContent(), keys));
     name.setSourceComment(shijing.getBook());
     return name;
+  }
+
+  private String textAbstract(String source, List<String> keys) {
+    if (StringUtils.isEmpty(source) || keys==null || keys.size() == 0) {
+      return "";
+    }
+    int startIndex = Integer.MAX_VALUE;
+    int endIndex = Integer.MIN_VALUE;
+    for (String key : keys) {
+      int indexOfKey = source.indexOf(key);
+      if (indexOfKey == -1) {
+        continue;
+      } else {
+        if (indexOfKey < startIndex) {
+          startIndex = indexOfKey;
+        }
+        if (indexOfKey > endIndex) {
+          endIndex = indexOfKey;
+        }
+      }
+    }
+    startIndex = (startIndex - extractSpan) < 0 ? 0 : startIndex - extractSpan;
+    endIndex = (endIndex + extractSpan) >= source.length() ? source.length() - 1 : endIndex + extractSpan;
+    return source.substring(startIndex, endIndex);
   }
 }
